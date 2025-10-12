@@ -1,0 +1,206 @@
+了解。接続成功版に合わせて最小一式を作り直します。
+カレントを /Users/nakajima/Documents/EmploymentRecord/EmploymentRecord/sp-tools にして配置してください。
+
+⸻
+
+0) config.ps1
+
+# ===== EDIT =====
+$SiteUrl  = "https://tf1980.sharepoint.com/sites/abeam"
+$TenantId = "06fc33a9-9a64-4306-9557-34d54b0a0aaf"
+$ClientId = "46c6f234-4c52-4872-abb9-036254518457"
+
+$SrcList  = "EmploymentRecords"        # 定義を吸い上げる元
+$DstList  = "EmploymentRecords_v2"     # 展開先（必要に応じ変更）
+$ProjectMaster = "ProjectMaster"       # 参照元マスター
+
+# 列内部名（承認系）
+$ApprovalStatus = "ApprovalStatus"     # Choice: 下書き/承認待ち/承認/却下
+$Approver       = "Approver"           # People 列
+$ActionColumn   = "Action"             # 1行テキスト（ボタン描画用）
+# ===== END =====
+
+
+⸻
+
+1) connect.ps1
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/config.ps1"
+
+Import-Module PnP.PowerShell -ErrorAction Stop
+Write-Host ("PS {0} / PnP {1}" -f $PSVersionTable.PSVersion, (Get-Module PnP.PowerShell -ListAvailable | Select-Object -First 1 -Expand Version))
+
+try {
+  Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Tenant $TenantId -Interactive -ReturnConnection | Out-Null
+} catch {
+  Write-Warning "Interactive failed. Trying Device Login…"
+  Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Tenant $TenantId -DeviceLogin -ReturnConnection | Out-Null
+}
+
+$cn = Get-PnPConnection
+if (-not $cn) { throw "Sign-in failed. Check app authentication settings." }
+
+$web = Get-PnPWeb
+Write-Host ("Connected: {0} <{1}>" -f $web.Title, $web.Url)
+
+
+⸻
+
+2) スキーマ吸出し export-schema.ps1
+
+. "$PSScriptRoot/connect.ps1"
+. "$PSScriptRoot/config.ps1"
+
+$fields = Get-PnPField -List $SrcList | Where-Object { -not $_.FromBaseType }
+
+$shape = $fields | ForEach-Object {
+  [PSCustomObject]@{
+    DisplayName  = $_.Title
+    InternalName = $_.InternalName
+    Type         = $_.TypeAsString
+    Choices      = (@($_.Choices) -join "|")
+    Required     = $_.Required
+  }
+}
+$shape | Export-Csv "$PSScriptRoot/${SrcList}_schema.csv" -NoTypeInformation -Encoding UTF8
+$shape | ConvertTo-Json -Depth 8 | Out-File "$PSScriptRoot/${SrcList}_schema.json" -Encoding UTF8
+Write-Host "Exported schema -> ${SrcList}_schema.(csv|json)"
+
+
+⸻
+
+3) 列書式吸出し export-format.ps1
+
+. "$PSScriptRoot/connect.ps1"
+. "$PSScriptRoot/config.ps1"
+
+$rows = foreach($f in Get-PnPField -List $SrcList | Where-Object {$_.CustomFormatter}){
+  [PSCustomObject]@{
+    InternalName   = $f.InternalName
+    DisplayName    = $f.Title
+    CustomFormatter= $f.CustomFormatter
+  }
+}
+$rows | Export-Csv "$PSScriptRoot/${SrcList}_format.csv" -NoTypeInformation -Encoding UTF8
+$rows | ConvertTo-Json -Depth 12 | Out-File "$PSScriptRoot/${SrcList}_format.json" -Encoding UTF8
+Write-Host "Exported format -> ${SrcList}_format.(csv|json)"
+
+
+⸻
+
+4) 新リスト展開（主要型）scaffold-list.ps1
+
+. "$PSScriptRoot/connect.ps1"
+. "$PSScriptRoot/config.ps1"
+
+if(-not (Get-PnPList -Identity $DstList -ErrorAction SilentlyContinue)){
+  New-PnPList -Title $DstList -Template GenericList -Url ("Lists/{0}" -f $DstList) -OnQuickLaunch
+}
+
+$schema = Get-Content "$PSScriptRoot/${SrcList}_schema.json" | ConvertFrom-Json
+foreach($c in $schema){
+  if(Get-PnPField -List $DstList -Identity $c.InternalName -ErrorAction SilentlyContinue){ continue }
+  switch ($c.Type) {
+    "Text"     { Add-PnPField -List $DstList -DisplayName $c.DisplayName -InternalName $c.InternalName -Type Text }
+    "Note"     { Add-PnPField -List $DstList -DisplayName $c.DisplayName -InternalName $c.InternalName -Type Note }
+    "Number"   { Add-PnPField -List $DstList -DisplayName $c.DisplayName -InternalName $c.InternalName -Type Number }
+    "Currency" { Add-PnPField -List $DstList -DisplayName $c.DisplayName -InternalName $c.InternalName -Type Currency }
+    "DateTime" { Add-PnPField -List $DstList -DisplayName $c.DisplayName -InternalName $c.InternalName -Type DateTime }
+    "Choice"   {
+      $choices = if([string]::IsNullOrEmpty($c.Choices)) { @() } else { $c.Choices -split '\|'}
+      Add-PnPField -List $DstList -DisplayName $c.DisplayName -InternalName $c.InternalName -Type Choice -Choices $choices
+    }
+    "User"     { Add-PnPField -List $DstList -DisplayName $c.DisplayName -InternalName $c.InternalName -Type User }
+    default    { Write-Host "Skip type: $($c.Type) [$($c.DisplayName)]" -Foreground Yellow }
+  }
+  if($c.Required){ Set-PnPField -List $DstList -Identity $c.InternalName -Values @{ Required = $true } }
+}
+Write-Host "Scaffolded -> $DstList"
+
+
+⸻
+
+5) Lookup（ProjectMaster）追加 add-lookup-project.ps1
+
+. "$PSScriptRoot/connect.ps1"
+. "$PSScriptRoot/config.ps1"
+
+$pm = Get-PnPList -Identity $ProjectMaster
+$listId = $pm.Id.ToString("B")
+
+Add-PnPFieldFromXml -List $DstList -FieldXml @"
+<Field Type='Lookup'
+  DisplayName='財源_PJ'
+  StaticName='ProjectCodeLookup'
+  Name='ProjectCodeLookup'
+  List='$listId'
+  ShowField='ProjectCode'
+  Required='FALSE' />
+"@
+Write-Host "Lookup added: $DstList.ProjectCodeLookup -> $ProjectMaster.ProjectCode"
+
+
+⸻
+
+6) 1列ボタン適用 apply-actions.ps1
+
+. "$PSScriptRoot/connect.ps1"
+. "$PSScriptRoot/config.ps1"
+
+$json = @"
+{
+  "$schema":"https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType":"div","style":{"display":"flex","gap":"6px"},
+  "children":[
+    {"elmType":"button","txtContent":"申請",
+     "style":{"padding":"4px 10px","display":"=if([$${ApprovalStatus}]=='下書き' && @me==[$Author.email],'inline-flex','none')"},
+     "customRowAction":{"action":"setValue","actionInput":{"$${ApprovalStatus}":"承認待ち"}}},
+    {"elmType":"button","txtContent":"承認",
+     "style":{"padding":"4px 10px","display":"=if([$${ApprovalStatus}]=='承認待ち' && @me==[$${Approver}.email],'inline-flex','none')"},
+     "customRowAction":{"action":"setValue","actionInput":{"$${ApprovalStatus}":"承認"}}},
+    {"elmType":"button","txtContent":"却下",
+     "style":{"padding":"4px 10px","display":"=if([$${ApprovalStatus}]=='承認待ち' && @me==[$${Approver}.email],'inline-flex','none')"},
+     "customRowAction":{"action":"setValue","actionInput":{"$${ApprovalStatus}":"却下"}}}
+  ]
+}
+"@
+# 変数埋め込み
+$json = $json.Replace("$${ApprovalStatus}", $ApprovalStatus).Replace("$${Approver}", $Approver)
+
+# 対象列(1行テキスト)へ適用
+Set-PnPField -List $SrcList -Identity $ActionColumn -Values @{ CustomFormatter = $json }
+Write-Host "Applied column formatter to $SrcList.$ActionColumn"
+
+
+⸻
+
+7) 実行順（最短）
+
+cd /Users/nakajima/Documents/EmploymentRecord/EmploymentRecord/sp-tools
+
+# 接続
+./connect.ps1
+
+# スキーマ・書式を吸い出し（元=EmploymentRecords）
+./export-schema.ps1
+./export-format.ps1
+
+# 新リストを展開（必要時）
+./scaffold-list.ps1
+./add-lookup-project.ps1
+
+# 元リストに1列ボタン適用（Action列）
+./apply-actions.ps1
+
+
+⸻
+
+補足
+	•	承認メール通知は Power Automate 側で、トリガー式のみ設定：
+	•	依頼時：@equals(triggerOutputs()?['body/ApprovalStatus'],'承認待ち')
+	•	結果時：@or(equals(triggerOutputs()?['body/ApprovalStatus'],'承認'),equals(triggerOutputs()?['body/ApprovalStatus'],'却下'))
+	•	内部名違いがある場合は config.ps1 を直すだけで再適用可能。
+
+不足あれば、People/Choice/Lookupのデータ移送関数もすぐ追加します。
