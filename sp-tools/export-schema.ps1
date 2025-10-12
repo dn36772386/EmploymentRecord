@@ -1,42 +1,37 @@
 . "$PSScriptRoot/connect.ps1"
 . "$PSScriptRoot/config.ps1"
 
-
 $fields = Get-PnPField -List $SrcList
 
-# 必要プロパティを明示ロード（CSOMの遅延読み込みを解消）
 foreach($f in $fields){
-  Get-PnPProperty -ClientObject $f -Property Title,InternalName,TypeAsString,Required,FromBaseType | Out-Null
-  # 存在しないプロパティを指定しても無害。取得できるものだけ解決される。
-  Get-PnPProperty -ClientObject $f -Property Choices,LookupList,LookupField,AllowMultipleValues,DisplayFormat -ErrorAction SilentlyContinue | Out-Null
+    Get-PnPProperty -ClientObject $f -Property Title,InternalName,TypeAsString,Required,FromBaseType | Out-Null
+    Get-PnPProperty -ClientObject $f -Property Choices,LookupList,LookupField,AllowMultipleValues,DisplayFormat -ErrorAction SilentlyContinue | Out-Null
 }
 
 $shape = foreach($f in $fields | Where-Object { -not $_.FromBaseType }) {
-  # 安全に Choices 等を取り出す
-  $hasChoices  = $f.PSObject.Properties.Name -contains 'Choices' -and $f.Choices
-  $choicesStr  = if($hasChoices -and ($f.TypeAsString -in @('Choice','MultiChoice'))) { ($f.Choices -as [string[]]) -join '|' } else { '' }
+    $hasChoices  = $f.PSObject.Properties.Name -contains 'Choices' -and $f.Choices
+    $choicesStr  = if($hasChoices -and ($f.TypeAsString -in @('Choice','MultiChoice'))) { ($f.Choices -as [string[]]) -join '|' } else { '' }
 
-  $isLookup      = $f.TypeAsString -in @('Lookup','LookupMulti')
-  $lookupListId  = if($isLookup -and $f.LookupList)  { $f.LookupList }  else { '' }
-  $lookupField   = if($isLookup -and $f.LookupField) { $f.LookupField } else { '' }
+    $isLookup      = $f.TypeAsString -in @('Lookup','LookupMulti')
+    $lookupListId  = if($isLookup -and $f.LookupList)  { $f.LookupList }  else { '' }
+    $lookupField   = if($isLookup -and $f.LookupField) { $f.LookupField } else { '' }
 
-  $allowMulti = if($f.PSObject.Properties.Name -contains 'AllowMultipleValues' -and $f.AllowMultipleValues) { $true } else { $false }
-  $displayFmt = if($f.PSObject.Properties.Name -contains 'DisplayFormat') { $f.DisplayFormat } else { $null }
+    $allowMulti = if($f.PSObject.Properties.Name -contains 'AllowMultipleValues' -and $f.AllowMultipleValues) { $true } else { $false }
+    $displayFmt = if($f.PSObject.Properties.Name -contains 'DisplayFormat') { $f.DisplayFormat } else { $null }
 
-  [PSCustomObject]@{
-    DisplayName   = $f.Title
-    InternalName  = $f.InternalName
-    Type          = $f.TypeAsString
-    Required      = [bool]$f.Required
-    AllowMultiple = [bool]$allowMulti
-    Choices       = $choicesStr
-    LookupListId  = $lookupListId
-    LookupField   = $lookupField
-    DisplayFormat = $displayFmt
-  }
+    [PSCustomObject]@{
+        DisplayName   = $f.Title
+        InternalName  = $f.InternalName
+        Type          = $f.TypeAsString
+        Required      = [bool]$f.Required
+        AllowMultiple = [bool]$allowMulti
+        Choices       = $choicesStr
+        LookupListId  = $lookupListId
+        LookupField   = $lookupField
+        DisplayFormat = $displayFmt
+    }
 }
 
-# 出力
 $csv  = Join-Path $PSScriptRoot "${SrcList}_schema.csv"
 $json = Join-Path $PSScriptRoot "${SrcList}_schema.json"
 $shape | Export-Csv $csv -NoTypeInformation -Encoding UTF8

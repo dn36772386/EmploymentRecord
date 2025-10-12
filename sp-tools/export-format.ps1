@@ -1,3 +1,5 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/connect.ps1"
 . "$PSScriptRoot/config.ps1"
 
