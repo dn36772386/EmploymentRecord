@@ -1,8 +1,15 @@
 . "$PSScriptRoot/connect.ps1"
 . "$PSScriptRoot/config.ps1"
 
-# 必要プロパティを明示ロード（Choices 等は非 Choice でも含めて良い。参照時は防御）
-$fields = Get-PnPField -List $SrcList -Includes Title,InternalName,TypeAsString,Required,Choices,LookupList,LookupField,AllowMultipleValues,DisplayFormat,FromBaseType
+
+$fields = Get-PnPField -List $SrcList
+
+# 必要プロパティを明示ロード（CSOMの遅延読み込みを解消）
+foreach($f in $fields){
+  Get-PnPProperty -ClientObject $f -Property Title,InternalName,TypeAsString,Required,FromBaseType | Out-Null
+  # 存在しないプロパティを指定しても無害。取得できるものだけ解決される。
+  Get-PnPProperty -ClientObject $f -Property Choices,LookupList,LookupField,AllowMultipleValues,DisplayFormat -ErrorAction SilentlyContinue | Out-Null
+}
 
 $shape = foreach($f in $fields | Where-Object { -not $_.FromBaseType }) {
   # 安全に Choices 等を取り出す
