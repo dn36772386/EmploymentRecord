@@ -1,0 +1,127 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "display": "flex",
+    "flex-direction": "column",
+    "gap": "8px"
+  },
+  "children": [
+    {
+      "elmType": "button",
+      "customRowAction": {
+        "action": "executeFlow",
+        "actionParams": "{\"id\": \"YOUR_FLOW_ID_HERE\"}"
+      },
+      "attributes": {
+        "class": "ms-fontColor-themePrimary ms-fontColor-themeDark--hover",
+        "title": "申請を提出"
+      },
+      "style": {
+        "display": "=if([$OverallApproval] == '' || [$OverallApproval] == '下書き', 'flex', 'none')",
+        "border": "1px solid #0078d4",
+        "background-color": "#0078d4",
+        "color": "white",
+        "padding": "8px 16px",
+        "cursor": "pointer",
+        "border-radius": "4px",
+        "align-items": "center",
+        "justify-content": "center",
+        "font-weight": "600"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "txtContent": "📤 申請を提出",
+          "style": {
+            "font-size": "14px"
+          }
+        }
+      ]
+    },
+    {
+      "elmType": "button",
+      "customRowAction": {
+        "action": "executeFlow",
+        "actionParams": "{\"id\": \"YOUR_APPROVAL_FLOW_ID_HERE\"}"
+      },
+      "attributes": {
+        "class": "ms-fontColor-green ms-fontColor-greenDark--hover",
+        "title": "承認する"
+      },
+      "style": {
+        "display": "=if([$OverallApproval] == '申請中', 'flex', 'none')",
+        "border": "1px solid #107c10",
+        "background-color": "#107c10",
+        "color": "white",
+        "padding": "8px 16px",
+        "cursor": "pointer",
+        "border-radius": "4px",
+        "align-items": "center",
+        "justify-content": "center",
+        "font-weight": "600"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "txtContent": "✅ 承認する",
+          "style": {
+            "font-size": "14px"
+          }
+        }
+      ]
+    },
+    {
+      "elmType": "button",
+      "customRowAction": {
+        "action": "executeFlow",
+        "actionParams": "{\"id\": \"YOUR_REJECTION_FLOW_ID_HERE\"}"
+      },
+      "attributes": {
+        "class": "ms-fontColor-red ms-fontColor-redDark--hover",
+        "title": "却下する"
+      },
+      "style": {
+        "display": "=if([$OverallApproval] == '申請中', 'flex', 'none')",
+        "border": "1px solid #d13438",
+        "background-color": "#d13438",
+        "color": "white",
+        "padding": "8px 16px",
+        "cursor": "pointer",
+        "border-radius": "4px",
+        "align-items": "center",
+        "justify-content": "center",
+        "font-weight": "600"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "txtContent": "❌ 却下する",
+          "style": {
+            "font-size": "14px"
+          }
+        }
+      ]
+    },
+    {
+      "elmType": "div",
+      "style": {
+        "display": "=if([$OverallApproval] == '承認' || [$OverallApproval] == '却下', 'flex', 'none')",
+        "padding": "8px 16px",
+        "background-color": "=if([$OverallApproval] == '承認', '#d4edda', '#f8d7da')",
+        "border": "=if([$OverallApproval] == '承認', '1px solid #c3e6cb', '1px solid #f5c6cb')",
+        "border-radius": "4px",
+        "align-items": "center",
+        "justify-content": "center",
+        "font-weight": "600",
+        "color": "=if([$OverallApproval] == '承認', '#155724', '#721c24')"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "txtContent": "=if([$OverallApproval] == '承認', '✅ 承認済み', '❌ 却下済み')"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "cursor": "default",
+    "min-height": "24px",
+    "min-width": "130px",
+    "display": "inline-flex",
+    "align-items": "center",
+    "text-overflow": "ellipsis",
+    "overflow": "hidden",
+    "white-space": "nowrap",
+    "box-sizing": "border-box",
+    "padding": "4px 8px 5px 8px",
+    "margin": "9px 0px 9px 0px",
+    "border-radius": "14px",
+    "border-width": "1px",
+    "border-style": "solid"
+  },
+  "attributes": {
+    "class": {
+      "operator": ":",
+      "operands": [
+        {
+          "operator": "==",
+          "operands": [
+            "[$OverallApproval]",
+            "未申請"
+          ]
+        },
+        "sp-css-borderColor-neutralTertiaryAlt sp-css-backgroundColor-BgLightGray--hover",
+        {
+          "operator": ":",
+          "operands": [
+            {
+              "operator": "||",
+              "operands": [
+                {
+                  "operator": "==",
+                  "operands": [
+                    "[$OverallApproval]",
+                    "第1段承認待ち"
+                  ]
+                },
+                {
+                  "operator": "==",
+                  "operands": [
+                    "[$OverallApproval]",
+                    "第2段承認待ち"
+                  ]
+                }
+              ]
+            },
+            "sp-css-backgroundColor-BgMauve sp-css-backgroundColor-BgViolet--hover sp-css-color-MauveFont",
+            {
+              "operator": ":",
+              "operands": [
+                {
+                  "operator": "==",
+                  "operands": [
+                    "[$OverallApproval]",
+                    "差戻し"
+                  ]
+                },
+                "sp-css-backgroundColor-errorBackground30 sp-css-backgroundColor-errorBackground30--hover sp-css-color-CoralFont",
+                "sp-css-backgroundColor-successBackground30 sp-css-backgroundColor-successBackground30--hover sp-css-color-MintGreenFont"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "children": [
+    {
+      "elmType": "span",
+      "style": {
+        "flex": "auto"
+      },
+      "txtContent": "=if([$OverallApproval], [$OverallApproval] + ' (' + if([$Stage1ApprovalStatus], [$Stage1ApprovalStatus], '-') + ' / ' + if([$Stage2ApprovalStatus], [$Stage2ApprovalStatus], '-') + ')', '未設定')"
+    }
+  ]
+}

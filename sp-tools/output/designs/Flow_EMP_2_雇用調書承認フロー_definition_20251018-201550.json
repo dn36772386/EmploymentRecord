@@ -1,0 +1,487 @@
+{
+  "properties": {
+    "definition": {
+      "triggers": {
+        "manual": {
+          "splitOn": "@triggerBody()['rows']",
+          "type": "Request",
+          "kind": "ApiConnection",
+          "inputs": {
+            "operationId": "GetItemHybridTriggerSchema",
+            "parameters": {
+              "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+              "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity": {
+                        "properties": {
+                          "ID": {
+                            "title": "ID",
+                            "type": "integer",
+                            "format": "int64"
+                          }
+                        },
+                        "type": "object",
+                        "required": []
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "rows"
+              ]
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_item": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+              }
+            },
+            "method": "get",
+            "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/tables/@{encodeURIComponent('9898ad51-5d08-4c68-97c8-e8123b70bc44')}/items/@{triggerBody()?['entity']?['ID']}"
+          },
+          "runAfter": {}
+        },
+        "Condition_Stage1": {
+          "type": "If",
+          "actions": {
+            "Break_Permissions": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/_api/web/lists/getbytitle('EMP_1_EmploymentRecords')/items(@{outputs('Get_item')?['body/ID']})/breakroleinheritance(copyRoleAssignments=false)",
+                "headers": {
+                  "Accept": "application/json;odata=verbose",
+                  "Content-Type": "application/json;odata=verbose"
+                }
+              },
+              "runAfter": {
+                "Update_Stage1_Approved": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Update_Stage1_Approved": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": {
+                  "Stage1ApprovalDate": "@{utcNow()}",
+                  "Stage1ApprovalStatus": "承認",
+                  "Stage1ApprovalComment": "@{outputs('Approval_Stage1')?['body/responses'][0]['comments']}"
+                },
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "patch",
+                "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/tables/@{encodeURIComponent('9898ad51-5d08-4c68-97c8-e8123b70bc44')}/items/@{outputs('Get_item')?['body/ID']}"
+              },
+              "runAfter": {}
+            },
+            "Grant_Read_Permission": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/_api/web/lists/getbytitle('EMP_1_EmploymentRecords')/items(@{outputs('Get_item')?['body/ID']})/roleassignments/addroleassignment(principalid=@{outputs('Get_item')?['body/AuthorId']},roledefid=1073741826)",
+                "headers": {
+                  "Accept": "application/json;odata=verbose",
+                  "Content-Type": "application/json;odata=verbose"
+                }
+              },
+              "runAfter": {
+                "Break_Permissions": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Approval_Stage1": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@outputs('Approval_Stage1')?['body/outcome']",
+              "Approve"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Send_Rejection_Email_Stage1": {
+                "type": "ApiConnection",
+                "inputs": {
+                  "body": {
+                    "Body": "<p>雇用調書が差戻されました。</p><p><strong>申請者:</strong> @{outputs('Get_item')?['body/FullName']}</p><p><strong>差戻理由:</strong><br>@{outputs('Approval_Stage1')?['body/responses'][0]['comments']}</p><p><a href=\"@{outputs('Get_item')?['body/{Link}']}\">アイテムを確認</a></p>",
+                    "To": "@{outputs('Get_item')?['body/AuthorEmail']}",
+                    "Subject": "【差戻し】雇用調書 - @{outputs('Get_item')?['body/FullName']}"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['office365']['connectionId']"
+                    }
+                  },
+                  "method": "post",
+                  "path": "/v2/Mail"
+                },
+                "runAfter": {
+                  "Update_Stage1_Rejected": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Update_Stage1_Rejected": {
+                "type": "ApiConnection",
+                "inputs": {
+                  "body": {
+                    "OverallApproval": "差戻し",
+                    "Stage1ApprovalDate": "@{utcNow()}",
+                    "Stage1ApprovalStatus": "差戻し",
+                    "Stage1ApprovalComment": "@{outputs('Approval_Stage1')?['body/responses'][0]['comments']}"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                    }
+                  },
+                  "method": "patch",
+                  "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/tables/@{encodeURIComponent('9898ad51-5d08-4c68-97c8-e8123b70bc44')}/items/@{outputs('Get_item')?['body/ID']}"
+                },
+                "runAfter": {}
+              }
+            }
+          }
+        },
+        "Final_Approval_Check": {
+          "type": "If",
+          "actions": {
+            "Send_Completion_Email": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": {
+                  "Body": "<p>雇用調書の承認が完了しました。</p><p><strong>申請者:</strong> @{outputs('Get_item')?['body/FullName']}</p><p><strong>第1承認者:</strong> @{outputs('Get_item')?['body/Stage1ApproversEmail']} - 承認</p><p><strong>第2承認者:</strong> @{outputs('Get_item')?['body/Stage2ApproversEmail']} - 承認</p><p><strong>承認完了日時:</strong> @{utcNow()}</p><p><a href=\"@{outputs('Get_item')?['body/{Link}']}\">アイテムを確認</a></p>",
+                  "To": "@{outputs('Get_item')?['body/AuthorEmail']};@{outputs('Get_item')?['body/Stage1ApproversEmail']};@{outputs('Get_item')?['body/Stage2ApproversEmail']}",
+                  "Subject": "【承認完了】雇用調書 - @{outputs('Get_item')?['body/FullName']}"
+                },
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['office365']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail"
+              },
+              "runAfter": {
+                "Update_Final_Approved": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Update_Final_Approved": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": {
+                  "OverallApproval": "承認完了",
+                  "ApprovalCompletedDate": "@{utcNow()}"
+                },
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "patch",
+                "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/tables/@{encodeURIComponent('9898ad51-5d08-4c68-97c8-e8123b70bc44')}/items/@{outputs('Get_item')?['body/ID']}"
+              },
+              "runAfter": {}
+            }
+          },
+          "runAfter": {
+            "Condition_Stage1": [
+              "Succeeded"
+            ],
+            "Condition_Stage2": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@outputs('Approval_Stage1')?['body/outcome']",
+                  "Approve"
+                ]
+              },
+              {
+                "equals": [
+                  "@outputs('Approval_Stage2')?['body/outcome']",
+                  "Approve"
+                ]
+              }
+            ]
+          },
+          "else": {
+            "actions": {
+              "Update_Final_Rejected": {
+                "type": "ApiConnection",
+                "inputs": {
+                  "body": {
+                    "OverallApproval": "差戻し"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                    }
+                  },
+                  "method": "patch",
+                  "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/tables/@{encodeURIComponent('9898ad51-5d08-4c68-97c8-e8123b70bc44')}/items/@{outputs('Get_item')?['body/ID']}"
+                },
+                "runAfter": {}
+              }
+            }
+          }
+        },
+        "Condition_Stage2": {
+          "type": "If",
+          "actions": {
+            "Grant_Read_Permission_Stage2": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/_api/web/lists/getbytitle('EMP_1_EmploymentRecords')/items(@{outputs('Get_item')?['body/ID']})/roleassignments/addroleassignment(principalid=@{outputs('Get_item')?['body/AuthorId']},roledefid=1073741826)",
+                "headers": {
+                  "Accept": "application/json;odata=verbose",
+                  "Content-Type": "application/json;odata=verbose"
+                }
+              },
+              "runAfter": {
+                "Break_Permissions_Stage2": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Update_Stage2_Approved": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": {
+                  "Stage2ApprovalDate": "@{utcNow()}",
+                  "Stage2ApprovalStatus": "承認",
+                  "Stage2ApprovalComment": "@{outputs('Approval_Stage2')?['body/responses'][0]['comments']}"
+                },
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "patch",
+                "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/tables/@{encodeURIComponent('9898ad51-5d08-4c68-97c8-e8123b70bc44')}/items/@{outputs('Get_item')?['body/ID']}"
+              },
+              "runAfter": {}
+            },
+            "Break_Permissions_Stage2": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/_api/web/lists/getbytitle('EMP_1_EmploymentRecords')/items(@{outputs('Get_item')?['body/ID']})/breakroleinheritance(copyRoleAssignments=false)",
+                "headers": {
+                  "Accept": "application/json;odata=verbose",
+                  "Content-Type": "application/json;odata=verbose"
+                }
+              },
+              "runAfter": {
+                "Update_Stage2_Approved": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Approval_Stage2": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@outputs('Approval_Stage2')?['body/outcome']",
+              "Approve"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Update_Stage2_Rejected": {
+                "type": "ApiConnection",
+                "inputs": {
+                  "body": {
+                    "Stage2ApprovalDate": "@{utcNow()}",
+                    "OverallApproval": "差戻し",
+                    "Stage2ApprovalStatus": "差戻し",
+                    "Stage2ApprovalComment": "@{outputs('Approval_Stage2')?['body/responses'][0]['comments']}"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                    }
+                  },
+                  "method": "patch",
+                  "path": "/datasets/@{encodeURIComponent('https://tf1980.sharepoint.com/sites/abeam')}/tables/@{encodeURIComponent('9898ad51-5d08-4c68-97c8-e8123b70bc44')}/items/@{outputs('Get_item')?['body/ID']}"
+                },
+                "runAfter": {}
+              },
+              "Send_Rejection_Email_Stage2": {
+                "type": "ApiConnection",
+                "inputs": {
+                  "body": {
+                    "Body": "<p>雇用調書が差戻されました。</p><p><strong>申請者:</strong> @{outputs('Get_item')?['body/FullName']}</p><p><strong>差戻理由:</strong><br>@{outputs('Approval_Stage2')?['body/responses'][0]['comments']}</p><p><a href=\"@{outputs('Get_item')?['body/{Link}']}\">アイテムを確認</a></p>",
+                    "To": "@{outputs('Get_item')?['body/AuthorEmail']}",
+                    "Subject": "【差戻し】雇用調書 - @{outputs('Get_item')?['body/FullName']}"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['office365']['connectionId']"
+                    }
+                  },
+                  "method": "post",
+                  "path": "/v2/Mail"
+                },
+                "runAfter": {
+                  "Update_Stage2_Rejected": [
+                    "Succeeded"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "Approval_Stage1": {
+          "type": "ApiConnection",
+          "inputs": {
+            "body": {
+              "title": "【第1承認依頼】雇用調書 - @{outputs('Get_item')?['body/FullName']}",
+              "itemLinkDescription": "アイテムを表示",
+              "details": "申請者: @{outputs('Get_item')?['body/FullName']}\\n職員番号: @{outputs('Get_item')?['body/EmployeeID']}\\n採用理由: @{outputs('Get_item')?['body/EmploymentReason']}\\n部署: @{outputs('Get_item')?['body/Department']}",
+              "itemLink": "@{outputs('Get_item')?['body/{Link}']}",
+              "assignedTo": "@{outputs('Get_item')?['body/Stage1ApproversClaims']}",
+              "approvalType": "Approve/Reject"
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['approvals']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/approvals"
+          },
+          "runAfter": {
+            "Get_item": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Approval_Stage2": {
+          "type": "ApiConnection",
+          "inputs": {
+            "body": {
+              "title": "【第2承認依頼】雇用調書 - @{outputs('Get_item')?['body/FullName']}",
+              "itemLinkDescription": "アイテムを表示",
+              "details": "申請者: @{outputs('Get_item')?['body/FullName']}\\n職員番号: @{outputs('Get_item')?['body/EmployeeID']}\\n採用理由: @{outputs('Get_item')?['body/EmploymentReason']}\\n部署: @{outputs('Get_item')?['body/Department']}",
+              "itemLink": "@{outputs('Get_item')?['body/{Link}']}",
+              "assignedTo": "@{outputs('Get_item')?['body/Stage2ApproversClaims']}",
+              "approvalType": "Approve/Reject"
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['approvals']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/approvals"
+          },
+          "runAfter": {
+            "Get_item": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "contentVersion": "1.0.0.0",
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "connectionName": "shared-sharepointonl-c16de817-784a-42f8-a770-1763e0504cbf",
+        "connectionReferenceLogicalName": "new_sharedsharepointonline_7964a",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "displayName": "SharePoint",
+        "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1769/1.0.1769.4352/sharepointonline/icon.png",
+        "brandColor": "",
+        "tier": "Standard",
+        "apiName": "sharepointonline",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      },
+      "shared_approvals": {
+        "connectionName": "shared-approvals-c69aa9ee-84cf-486d-a16b-cb6bb5eb927e",
+        "connectionReferenceLogicalName": "new_sharedapprovals_92bd7",
+        "source": "Invoker",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+        "displayName": "Standard approvals",
+        "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1774/1.0.1774.4397/approvals/icon.png",
+        "brandColor": "",
+        "tier": "Standard",
+        "apiName": "approvals",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      }
+    },
+    "state": "Started",
+    "displayName": "EMP_2_雇用調書承認フロー"
+  }
+}

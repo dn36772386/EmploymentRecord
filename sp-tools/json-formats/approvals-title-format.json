@@ -1,0 +1,48 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "display": "flex",
+    "flex-direction": "column",
+    "gap": "4px"
+  },
+  "children": [
+    {
+      "elmType": "div",
+      "style": {
+        "font-weight": "600",
+        "font-size": "14px",
+        "color": "#323130"
+      },
+      "txtContent": "=[$ParentRecord.Title]"
+    },
+    {
+      "elmType": "div",
+      "style": {
+        "font-size": "12px",
+        "color": "#605e5c",
+        "display": "flex",
+        "align-items": "center",
+        "gap": "8px"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "style": {
+            "padding": "2px 8px",
+            "border-radius": "10px",
+            "background-color": "=if([$Status] == '承認', '#d4edda', if([$Status] == '却下', '#f8d7da', if([$Status] == '申請中', '#fff3cd', if([$Status] == '差戻し', '#e8daef', '#e2e3e5'))))",
+            "color": "=if([$Status] == '承認', '#155724', if([$Status] == '却下', '#721c24', if([$Status] == '申請中', '#856404', if([$Status] == '差戻し', '#6c3483', '#383d41'))))",
+            "font-weight": "500",
+            "font-size": "11px"
+          },
+          "txtContent": "[$Status]"
+        },
+        {
+          "elmType": "span",
+          "txtContent": "='Stage ' + [$StageNumber]"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
-. "$PSScriptRoot/connect.ps1"
-. "$PSScriptRoot/config.ps1"
+. "$PSScriptRoot/../../connect.ps1"
+. "$PSScriptRoot/../../config.ps1"
 
 $fields = Get-PnPField -List $SrcList
 
@@ -32,8 +32,10 @@ $shape = foreach($f in $fields | Where-Object { -not $_.FromBaseType }) {
     }
 }
 
-$csv  = Join-Path $PSScriptRoot "${SrcList}_schema.csv"
-$json = Join-Path $PSScriptRoot "${SrcList}_schema.json"
+$outputDir = Join-Path $PSScriptRoot "../../output/schemas"
+if (-not (Test-Path $outputDir)) { New-Item -ItemType Directory -Path $outputDir -Force | Out-Null }
+$csv  = Join-Path $outputDir "${SrcList}_schema.csv"
+$json = Join-Path $outputDir "${SrcList}_schema.json"
 $shape | Export-Csv $csv -NoTypeInformation -Encoding UTF8
 $shape | ConvertTo-Json -Depth 6 | Out-File $json -Encoding UTF8
 Write-Host "Exported schema -> $csv / $json"

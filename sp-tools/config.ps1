@@ -15,11 +15,14 @@ $TenantId = if ($env:SP_TENANT_ID) { $env:SP_TENANT_ID } else { '06fc33a9-9a64-4
 $ClientId = if ($env:SP_CLIENT_ID) { $env:SP_CLIENT_ID } else { '46c6f234-4c52-4872-abb9-036254518457' }
 
 # 対象リスト名（元/先）
-$SrcList  = if ($env:SP_SRC_LIST)  { $env:SP_SRC_LIST }  else { 'EmploymentRecords' }
+$SrcList  = if ($env:SP_SRC_LIST)  { $env:SP_SRC_LIST }  else { 'EMP_1_EmploymentRecords' }
 $DstList  = if ($env:SP_DST_LIST)  { $env:SP_DST_LIST }  else { 'EmploymentRecords_v2' }
 
 # 参照元マスター
-$ProjectMaster = if ($env:SP_PROJECT_MASTER) { $env:SP_PROJECT_MASTER } else { 'ProjectMaster' }
+$ProjectMaster = if ($env:SP_PROJECT_MASTER) { $env:SP_PROJECT_MASTER } else { 'EMP_1_Projects' }
+
+# 承認リスト
+$Approvals = if ($env:SP_APPROVALS) { $env:SP_APPROVALS } else { 'EMP_1_EmploymentApprovals' }
 
 # 列内部名（承認系）
 $ApprovalStatus = if ($env:SP_APPROVAL_STATUS) { $env:SP_APPROVAL_STATUS } else { 'ApprovalStatus' }

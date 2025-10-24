@@ -1,0 +1,29 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "children": [
+    {
+      "elmType": "button",
+      "attributes": {
+        "title": "この行を申請します"
+      },
+      "txtContent": "申請",
+      "style": {
+        "display": "=if([$OverallApproval] == '未申請' || [$OverallApproval] == '差戻し' || [$OverallApproval] == '', 'inline-block', 'none')",
+        "cursor": "pointer",
+        "padding": "3px 10px",
+        "border-radius": "4px",
+        "background-color": "#0078d4",
+        "color": "white",
+        "border": "1px solid #0078d4",
+        "font-size": "12px",
+        "line-height": "14px",
+        "height": "20px"
+      },
+      "customRowAction": {
+        "action": "executeFlow",
+        "actionParams": "{\"id\":\"b69dcdd3-8b3d-5571-d034-511909859fe3\"}"
+      }
+    }
+  ]
+}

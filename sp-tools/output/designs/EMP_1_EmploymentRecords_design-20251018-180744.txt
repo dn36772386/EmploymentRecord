@@ -1,0 +1,6 @@
+# リスト設計書 (EMP_1_EmploymentRecords)
+
+生成日時: 2025/10/18 18:07:44
+サイト: https://tf1980.sharepoint.com/sites/abeam
+リスト: EMP_1_EmploymentRecords
+

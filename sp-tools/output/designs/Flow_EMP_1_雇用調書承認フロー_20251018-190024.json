@@ -1,0 +1,536 @@
+{
+  "name": "daf1fc3a-17a8-f011-bbd3-000d3ace47ae",
+  "id": "/providers/Microsoft.ProcessSimple/environments/Default-06fc33a9-9a64-4306-9557-34d54b0a0aaf/flows/daf1fc3a-17a8-f011-bbd3-000d3ace47ae",
+  "type": "Microsoft.ProcessSimple/environments/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "EMP_1_雇用調書承認フロー",
+    "userType": "Owner",
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "splitOn": "@triggerBody()['rows']",
+          "type": "Request",
+          "kind": "ApiConnection",
+          "inputs": {
+            "operationId": "GetItemHybridTriggerSchema",
+            "parameters": {
+              "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+              "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity": {
+                        "properties": {
+                          "ID": {
+                            "title": "ID",
+                            "type": "integer",
+                            "format": "int64"
+                          }
+                        },
+                        "type": "object",
+                        "required": []
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "rows"
+              ]
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "項目の取得": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+              "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44",
+              "id": "@triggerBody()?['entity']['ID']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItem",
+              "connectionName": "shared_sharepointonline"
+            }
+          }
+        },
+        "For_each": {
+          "foreach": "@outputs('項目の取得')?['body/Stage1Approvers']",
+          "actions": {
+            "アイテムまたはフォルダーへのアクセス権の付与": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+                  "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44",
+                  "id": "@outputs('項目の取得')?['body/ID']",
+                  "parameter/recipients": "@items('For_each')?['Email']",
+                  "parameter/roleValue": "role:1073741826"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GrantAccess",
+                  "connectionName": "shared_sharepointonline"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "項目の取得": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        },
+        "条件": {
+          "actions": {
+            "項目の更新": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+                  "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44",
+                  "id": "@outputs('項目の取得')?['body/ID']",
+                  "item/Stage1ApprovalStatus/Value": "承認"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PatchItem",
+                  "connectionName": "shared_sharepointonline"
+                }
+              }
+            },
+            "アイテムまたはファイルの共有を停止します": {
+              "runAfter": {
+                "項目の更新": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+                  "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44",
+                  "id": "@outputs('項目の更新')?['body/ID']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "UnshareItem",
+                  "connectionName": "shared_sharepointonline"
+                }
+              }
+            },
+            "アイテムまたはフォルダーへのアクセス権の付与_2": {
+              "runAfter": {
+                "For_each_2": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+                  "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44",
+                  "id": "@outputs('項目の更新')?['body/ID']",
+                  "parameter/recipients": "@outputs('項目の更新')?['body/Author/Email']",
+                  "parameter/roleValue": "role:1073741826"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GrantAccess",
+                  "connectionName": "shared_sharepointonline"
+                }
+              }
+            },
+            "For_each_2": {
+              "foreach": "@outputs('項目の更新')?['body/Stage1Approvers']",
+              "actions": {
+                "アイテムまたはフォルダーへのアクセス権の付与_3": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+                      "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44",
+                      "id": "@outputs('項目の更新')?['body/ID']",
+                      "parameter/recipients": "@items('For_each_2')?['Email']",
+                      "parameter/roleValue": "role:1073741826"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "GrantAccess",
+                      "connectionName": "shared_sharepointonline"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "アイテムまたはファイルの共有を停止します": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "For_each_1": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "項目の更新_1": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "dataset": "https://tf1980.sharepoint.com/sites/abeam",
+                    "table": "9898ad51-5d08-4c68-97c8-e8123b70bc44",
+                    "id": "@outputs('項目の取得')?['body/ID']",
+                    "item/Stage1ApprovalStatus/Value": "却下"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "operationId": "PatchItem",
+                    "connectionName": "shared_sharepointonline"
+                  }
+                }
+              }
+            }
+          },
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "",
+                  ""
+                ]
+              }
+            ]
+          },
+          "type": "If"
+        },
+        "For_each_1": {
+          "foreach": "@outputs('項目の取得')?['body/Stage1Approvers']",
+          "actions": {
+            "開始して承認を待機": {
+              "type": "OpenApiConnectionWebhook",
+              "inputs": {
+                "parameters": {
+                  "approvalType": "Basic",
+                  "WebhookApprovalCreationInput/title": "XXXに関する申請",
+                  "WebhookApprovalCreationInput/assignedTo": "@items('For_each_1')?['Email']",
+                  "WebhookApprovalCreationInput/details": "@{outputs('項目の取得')?['body/ID']}：XXXに関する申請",
+                  "WebhookApprovalCreationInput/itemLink": "@outputs('項目の取得')?['body/{Link}']",
+                  "WebhookApprovalCreationInput/enableNotifications": true,
+                  "WebhookApprovalCreationInput/enableReassignment": true
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+                  "operationId": "StartAndWaitForAnApproval",
+                  "connectionName": "shared_approvals"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "For_each": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        }
+      },
+      "outputs": {}
+    },
+    "triggerSchema": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity": {
+                "properties": {
+                  "ID": {
+                    "title": "ID",
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                },
+                "type": "object",
+                "required": []
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "rows"
+      ]
+    },
+    "state": "Started",
+    "sharingType": "CommonDataService",
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "connectionName": "shared-sharepointonl-c16de817-784a-42f8-a770-1763e0504cbf",
+        "connectionReferenceLogicalName": "new_sharedsharepointonline_7964a",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "displayName": "SharePoint",
+        "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1769/1.0.1769.4352/sharepointonline/icon.png",
+        "brandColor": "",
+        "tier": "Standard",
+        "apiName": "sharepointonline",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      },
+      "shared_approvals": {
+        "connectionName": "shared-approvals-c69aa9ee-84cf-486d-a16b-cb6bb5eb927e",
+        "connectionReferenceLogicalName": "new_sharedapprovals_92bd7",
+        "source": "Invoker",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+        "displayName": "Standard approvals",
+        "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1774/1.0.1774.4397/approvals/icon.png",
+        "brandColor": "",
+        "tier": "Standard",
+        "apiName": "approvals",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      }
+    },
+    "createdTime": "2025-10-13T09:30:24Z",
+    "lastModifiedTime": "2025-10-14T07:58:36Z",
+    "flowSuspensionReason": "None",
+    "environment": {
+      "name": "Default-06fc33a9-9a64-4306-9557-34d54b0a0aaf",
+      "type": "Microsoft.ProcessSimple/environments",
+      "id": "/providers/Microsoft.ProcessSimple/environments/Default-06fc33a9-9a64-4306-9557-34d54b0a0aaf"
+    },
+    "definitionSummary": {
+      "triggers": [
+        {
+          "type": "Request",
+          "kind": "ApiConnection"
+        }
+      ],
+      "actions": [
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "GetItem"
+        },
+        {
+          "type": "Foreach"
+        },
+        {
+          "type": "If"
+        },
+        {
+          "type": "Foreach"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "GrantAccess"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "PatchItem"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "UnshareItem"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "GrantAccess"
+        },
+        {
+          "type": "Foreach"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "PatchItem"
+        },
+        {
+          "type": "OpenApiConnectionWebhook",
+          "swaggerOperationId": "StartAndWaitForAnApproval"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "GrantAccess"
+        }
+      ]
+    },
+    "creator": {
+      "tenantId": "06fc33a9-9a64-4306-9557-34d54b0a0aaf",
+      "objectId": "624058ce-404b-4f40-aefa-7c4a0910e3a4",
+      "userId": "624058ce-404b-4f40-aefa-7c4a0910e3a4",
+      "userType": "ActiveDirectory"
+    },
+    "installationStatus": "Uninstalled",
+    "owningUser": {
+      "id": "d06e8354-a968-f011-bec2-6045bd626fa0",
+      "azureActiveDirectoryObjectId": "624058ce-404b-4f40-aefa-7c4a0910e3a4"
+    },
+    "provisioningMethod": "FromDefinition",
+    "flowFailureAlertSubscribed": true,
+    "workflowEntityId": "daf1fc3a-17a8-f011-bbd3-000d3ace47ae",
+    "workflowUniqueId": "a2ac2f03-5e10-488a-b621-7db12dae7b73",
+    "referencedResources": [
+      {
+        "service": "sharepoint",
+        "resource": {
+          "site": "https://tf1980.sharepoint.com/sites/abeam",
+          "list": "9898ad51-5d08-4c68-97c8-e8123b70bc44"
+        },
+        "referencers": [
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GetItem"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/PatchItem"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/UnshareItem"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/PatchItem"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          },
+          {
+            "referenceSourceType": "Triggers",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GetItem"
+          },
+          {
+            "referenceSourceType": "Triggers",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          },
+          {
+            "referenceSourceType": "Triggers",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/PatchItem"
+          },
+          {
+            "referenceSourceType": "Triggers",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/UnshareItem"
+          },
+          {
+            "referenceSourceType": "Triggers",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          },
+          {
+            "referenceSourceType": "Triggers",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/PatchItem"
+          },
+          {
+            "referenceSourceType": "Triggers",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          }
+        ]
+      },
+      {
+        "service": "sharepoint",
+        "resource": {
+          "site": "https://tf1980.sharepoint.com/sites/abeam",
+          "fileId": "@triggerBody()?['entity']['ID']"
+        },
+        "referencers": [
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GetItem"
+          }
+        ]
+      },
+      {
+        "service": "sharepoint",
+        "resource": {
+          "site": "https://tf1980.sharepoint.com/sites/abeam",
+          "fileId": "@outputs('項目の取得')?['body/ID']"
+        },
+        "referencers": [
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/PatchItem"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/PatchItem"
+          }
+        ]
+      },
+      {
+        "service": "sharepoint",
+        "resource": {
+          "site": "https://tf1980.sharepoint.com/sites/abeam",
+          "fileId": "@outputs('項目の更新')?['body/ID']"
+        },
+        "referencers": [
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/UnshareItem"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          },
+          {
+            "referenceSourceType": "Actions",
+            "operationId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/apiOperations/GrantAccess"
+          }
+        ]
+      }
+    ],
+    "isManaged": false,
+    "componentState": "Published",
+    "isCustomizable": {
+      "value": true,
+      "canBeChanged": true,
+      "managedPropertyLogicalName": "iscustomizableanddeletable"
+    },
+    "resourceId": "175f81dc-fc52-c0e8-d327-e8e87cbbd717",
+    "machineDescriptionData": {}
+  }
+}

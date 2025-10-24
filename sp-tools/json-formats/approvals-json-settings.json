@@ -1,0 +1,110 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "display": "flex",
+    "flex-direction": "column",
+    "gap": "8px"
+  },
+  "children": [
+    {
+      "elmType": "div",
+      "style": {
+        "display": "flex",
+        "align-items": "center",
+        "gap": "8px",
+        "padding": "8px 12px",
+        "border-radius": "4px",
+        "background-color": "=if([$Status] == '承認', '#d4edda', if([$Status] == '却下', '#f8d7da', if([$Status] == '申請中', '#fff3cd', if([$Status] == '差戻し', '#e8daef', '#e2e3e5'))))",
+        "border": "=if([$Status] == '承認', '1px solid #c3e6cb', if([$Status] == '却下', '1px solid #f5c6cb', if([$Status] == '申請中', '1px solid #ffeaa7', if([$Status] == '差戻し', '1px solid #d7bde2', '1px solid #d6d8db'))))",
+        "font-weight": "500"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "txtContent": "=if([$Status] == '承認', '✅', if([$Status] == '却下', '❌', if([$Status] == '申請中', '⏳', if([$Status] == '差戻し', '↩️', '📝'))))",
+          "style": {
+            "font-size": "18px"
+          }
+        },
+        {
+          "elmType": "div",
+          "style": {
+            "display": "flex",
+            "flex-direction": "column",
+            "gap": "2px"
+          },
+          "children": [
+            {
+              "elmType": "div",
+              "style": {
+                "font-weight": "600",
+                "color": "=if([$Status] == '承認', '#155724', if([$Status] == '却下', '#721c24', if([$Status] == '申請中', '#856404', if([$Status] == '差戻し', '#6c3483', '#383d41'))))"
+              },
+              "txtContent": "='Stage ' + [$StageNumber] + ' - ' + [$StageType]"
+            },
+            {
+              "elmType": "div",
+              "style": {
+                "font-size": "12px",
+                "color": "#6c757d"
+              },
+              "txtContent": "=if([$ApproverEmail] != '', [$ApproverEmail], '未設定')"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "elmType": "div",
+      "style": {
+        "display": "=if([$Note] != '', 'block', 'none')",
+        "padding": "8px",
+        "background-color": "#f8f9fa",
+        "border-left": "3px solid #6c757d",
+        "font-size": "13px",
+        "color": "#495057",
+        "margin-top": "4px"
+      },
+      "children": [
+        {
+          "elmType": "div",
+          "style": {
+            "font-weight": "600",
+            "margin-bottom": "4px",
+            "font-size": "11px",
+            "color": "#6c757d",
+            "text-transform": "uppercase"
+          },
+          "txtContent": "コメント"
+        },
+        {
+          "elmType": "div",
+          "txtContent": "[$Note]"
+        }
+      ]
+    },
+    {
+      "elmType": "div",
+      "style": {
+        "display": "=if([$ActionedAt] != '', 'flex', 'none')",
+        "justify-content": "space-between",
+        "align-items": "center",
+        "padding": "4px 8px",
+        "font-size": "11px",
+        "color": "#6c757d",
+        "border-top": "1px solid #dee2e6"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "txtContent": "=if([$ActionedBy.title] != '', '実行者: ' + [$ActionedBy.title], '')"
+        },
+        {
+          "elmType": "span",
+          "txtContent": "=if([$ActionedAt] != '', '処理日時: ' + toDateTimeString([$ActionedAt], 'yyyy/MM/dd HH:mm'), '')"
+        }
+      ]
+    }
+  ]
+}
