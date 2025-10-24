@@ -1,0 +1,41 @@
+# 機密情報
+.env
+.env.*
+*.env
+*secret*
+*password*
+*credential*
+*.pem
+*.key
+*.pfx
+*.p12
+
+# トークンファイル
+*token*.txt
+.flow-token.txt
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEの設定ファイル
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ログファイル
+*.log
+logs/
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp
