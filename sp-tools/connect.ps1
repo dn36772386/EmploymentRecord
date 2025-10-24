@@ -1,5 +1,10 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# 環境変数を読み込み
+. "$PSScriptRoot/load-env.ps1"
+
+# 設定を読み込み
 . "$PSScriptRoot/config.ps1"
 
 Import-Module PnP.PowerShell -ErrorAction Stop
