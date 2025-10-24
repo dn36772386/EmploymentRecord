@@ -1,7 +1,7 @@
 # 機密情報
 .env
-.env.*
-*.env
+.env.local
+.env.*.local
 *secret*
 *password*
 *credential*
@@ -9,6 +9,9 @@
 *.key
 *.pfx
 *.p12
+
+# ただし .env.example は除外しない
+!.env.example
 
 # トークンファイル
 *token*.txt

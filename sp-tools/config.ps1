@@ -6,13 +6,13 @@
 #>
 
 # SharePoint サイト URL
-$SiteUrl  = if ($env:SP_SITE_URL)  { $env:SP_SITE_URL }  else { 'https://tf1980.sharepoint.com/sites/abeam' }
+$SiteUrl  = if ($env:SP_SITE_URL)  { $env:SP_SITE_URL }  else { throw "SP_SITE_URL environment variable is required" }
 
 # Azure AD テナント ID（GUID）- カスタムアプリ使用時のみ
-$TenantId = if ($env:SP_TENANT_ID) { $env:SP_TENANT_ID } else { '06fc33a9-9a64-4306-9557-34d54b0a0aaf' }
+$TenantId = if ($env:SP_TENANT_ID) { $env:SP_TENANT_ID } else { throw "SP_TENANT_ID environment variable is required" }
 
 # アプリ（アプリ登録）のクライアント ID（GUID）- カスタムアプリ使用時のみ
-$ClientId = if ($env:SP_CLIENT_ID) { $env:SP_CLIENT_ID } else { '46c6f234-4c52-4872-abb9-036254518457' }
+$ClientId = if ($env:SP_CLIENT_ID) { $env:SP_CLIENT_ID } else { throw "SP_CLIENT_ID environment variable is required" }
 
 # 対象リスト名（元/先）
 $SrcList  = if ($env:SP_SRC_LIST)  { $env:SP_SRC_LIST }  else { 'EMP_1_EmploymentRecords' }
