@@ -1,0 +1,83 @@
+"InternalName","DisplayName","CustomFormatter"
+"_ApprovalStatus","承認の状態","{
+  ""elmType"": ""div"",
+  ""style"": {
+    ""cursor"": ""pointer"",
+    ""min-height"": ""24px"",
+    ""min-width"": ""130px"",
+    ""display"": ""=if([$FSObjType] == '1', 'none', 'inline-flex')"",
+    ""align-items"": ""center"",
+    ""text-overflow"": ""ellipsis"",
+    ""overflow"": ""hidden"",
+    ""white-space"": ""nowrap"",
+    ""box-sizing"": ""border-box"",
+    ""padding"": ""4px 8px 5px 8px"",
+    ""margin"": ""9px 0px 9px 0px"",
+    ""border-radius"": ""14px"",
+    ""border-width"": ""=if(@currentField == 0, '1px', '0')"",
+    ""border-style"": ""solid""
+  },
+  ""attributes"": {
+    ""role"": ""button"",
+    ""class"": {
+      ""operator"": "":"",
+      ""operands"": [
+        {
+          ""operator"": ""=="",
+          ""operands"": [
+            ""@currentField"",
+            ""0""
+          ]
+        },
+        ""sp-css-borderColor-neutralTertiaryAlt sp-css-backgroundColor-BgLightGray--hover"",
+        {
+          ""operator"": "":"",
+          ""operands"": [
+            {
+              ""operator"": ""=="",
+              ""operands"": [
+                ""@currentField"",
+                ""1""
+              ]
+            },
+            ""sp-css-backgroundColor-BgMauve sp-css-backgroundColor-BgViolet--hover sp-css-color-MauveFont"",
+            {
+              ""operator"": "":"",
+              ""operands"": [
+                {
+                  ""operator"": ""=="",
+                  ""operands"": [
+                    ""@currentField"",
+                    ""2""
+                  ]
+                },
+                ""sp-css-backgroundColor-errorBackground30 sp-css-backgroundColor-errorBackground30--hover sp-css-color-CoralFont"",
+                ""sp-css-backgroundColor-successBackground30 sp-css-backgroundColor-successBackground30--hover sp-css-color-MintGreenFont""
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  ""children"": [
+    {
+      ""elmType"": ""span"",
+      ""style"": {
+        ""flex"": ""auto""
+      },
+      ""txtContent"": ""@currentField.display""
+    },
+    {
+      ""elmType"": ""span"",
+      ""attributes"": {
+        ""iconName"": ""OpenInNewWindow"",
+        ""class"": ""=if(@currentField == 0, 'sp-css-color-themePrimary', '')""
+      }
+    }
+  ],
+  ""customRowAction"": {
+    ""action"": ""openApprovalDialog""
+  }
+}"
+"SubmitBtn","SubmitBtn","{""$schema"":""https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json"",""elmType"":""div"",""children"":[{""elmType"":""button"",""attributes"":{""title"":""この行を申請します""},""txtContent"":""申請"",""style"":{""display"":""=if([$ApprovalStatus] == '下書き','inline-block','none')"",""cursor"":""pointer"",""padding"":""6px 10px"",""border-radius"":""6px"",""background-color"":""#0078d4"",""color"":""white"",""border"":""1px solid #0078d4""},""customRowAction"":{""action"":""executeFlow"",""actionParams"":""{\""id\"":\""b69dcdd3-8b3d-5571-d034-511909859fe3\""}""}}]}"
